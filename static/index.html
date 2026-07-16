@@ -7,12 +7,47 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #000;
+    --fg: #e8eaed;
+    --panel: #202124;
+    --panel-alt: #303134;
+    --border: #5f6368;
+    --border-soft: #3c4043;
+    --muted: #9aa0a6;
+    --accent: #4285F4;
+    --accent-soft: #8ab4f8;
+    --user-text: #fff;
+    --user-time: #e8f0fe;
+    --bot-time: #9aa0a6;
+    --typing: #70757a;
+    --banner-bg: #1a1a1a;
+    --credit: #9aa0a6;
+  }
+  body.light {
+    --bg: #fff;
+    --fg: #202124;
+    --panel: #fff;
+    --panel-alt: #f1f3f4;
+    --border: #dadce0;
+    --border-soft: #eee;
+    --muted: #70757a;
+    --accent: #1a73e8;
+    --accent-soft: #1a73e8;
+    --user-text: #fff;
+    --user-time: #e8f0fe;
+    --bot-time: #5f6368;
+    --typing: #70757a;
+    --banner-bg: #f1f3f4;
+    --credit: #70757a;
+  }
   body {
     font-family: Arial, Helvetica, sans-serif;
-    background: #000;
-    color: #e8eaed;
+    background: var(--bg);
+    color: var(--fg);
     min-height: 100vh;
     padding-top: 42px;
+    transition: background 0.2s, color 0.2s;
   }
   /* Başlangıç ekranı (Google benzeri) */
   #home {
@@ -28,21 +63,21 @@
     font-weight: 500;
     letter-spacing: -2px;
     text-align: center;
-    color: #4285F4;
+    color: var(--accent);
   }
   #home .logo span:nth-child(2) { color: #EA4335; }
   #home .logo span:nth-child(3) { color: #FBBC05; }
-  #home .logo span:nth-child(4) { color: #4285F4; }
+  #home .logo span:nth-child(4) { color: var(--accent); }
   #home .logo span:nth-child(5) { color: #34A853; }
   #home .logo span:nth-child(6) { color: #EA4335; }
   .search-box {
     display: flex;
     align-items: center;
     width: min(580px, 90vw);
-    border: 1px solid #5f6368;
+    border: 1px solid var(--border);
     border-radius: 24px;
     padding: 12px 18px;
-    background: #202124;
+    background: var(--panel);
     box-shadow: 0 1px 6px rgba(0,0,0,0.5);
   }
   .search-box:focus-within { box-shadow: 0 1px 10px rgba(32,33,36,0.28); }
@@ -52,11 +87,11 @@
     outline: none;
     font-size: 16px;
     background: transparent;
-    color: #e8eaed;
+    color: var(--fg);
   }
   .search-box button {
     border: none;
-    background: #4285F4;
+    background: var(--accent);
     color: #fff;
     border-radius: 20px;
     padding: 8px 18px;
@@ -65,31 +100,31 @@
   }
   .credit {
     font-size: 13px;
-    color: #9aa0a6;
+    color: var(--credit);
   }
 
   /* Sohbet ekranı */
   #chat { display: none; flex-direction: column; height: 100vh; }
   #chat .topbar {
     padding: 10px 20px;
-    border-bottom: 1px solid #3c4043;
+    border-bottom: 1px solid var(--border-soft);
     font-size: 18px;
     font-weight: 500;
-    color: #8ab4f8;
+    color: var(--accent-soft);
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
   }
-  #chat .topbar .back { font-size: 13px; color: #9aa0a6; cursor: pointer; }
+  #chat .topbar .back { font-size: 13px; color: var(--muted); cursor: pointer; }
   #chat .topbar select {
     font-size: 13px;
     padding: 4px 8px;
-    border: 1px solid #5f6368;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: #202124;
-    color: #e8eaed;
+    background: var(--panel);
+    color: var(--fg);
     cursor: pointer;
     max-width: 200px;
   }
@@ -102,32 +137,32 @@
     gap: 16px;
   }
   .msg { max-width: 70%; padding: 12px 16px; border-radius: 18px; line-height: 1.5; }
-  .msg.user { align-self: flex-end; background: #4285F4; color: #fff; border-bottom-right-radius: 4px; }
-  .msg.bot { align-self: flex-start; background: #202124; color: #e8eaed; border-bottom-left-radius: 4px; }
-  .msg.bot pre { background: #303134; padding: 10px; border-radius: 6px; overflow-x: auto; }
-  .msg.bot code { background: #303134; padding: 2px 4px; border-radius: 4px; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: var(--user-text); border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--panel); color: var(--fg); border-bottom-left-radius: 4px; }
+  .msg.bot pre { background: var(--panel-alt); padding: 10px; border-radius: 6px; overflow-x: auto; }
+  .msg.bot code { background: var(--panel-alt); padding: 2px 4px; border-radius: 4px; }
   .msg.bot pre code { background: none; padding: 0; }
   .msg.bot table { border-collapse: collapse; margin: 8px 0; }
-  .msg.bot th, .msg.bot td { border: 1px solid #5f6368; padding: 6px 10px; }
+  .msg.bot th, .msg.bot td { border: 1px solid var(--border); padding: 6px 10px; }
   #inputbar {
     display: flex;
     gap: 10px;
     padding: 14px 20px;
-    border-top: 1px solid #3c4043;
+    border-top: 1px solid var(--border-soft);
   }
   #inputbar input {
     flex: 1;
-    border: 1px solid #5f6368;
+    border: 1px solid var(--border);
     border-radius: 24px;
     padding: 12px 18px;
     font-size: 16px;
     outline: none;
-    background: #202124;
-    color: #e8eaed;
+    background: var(--panel);
+    color: var(--fg);
   }
   #inputbar button {
     border: none;
-    background: #4285F4;
+    background: var(--accent);
     color: #fff;
     border-radius: 24px;
     padding: 0 22px;
@@ -135,7 +170,7 @@
     cursor: pointer;
   }
   #inputbar button:disabled { opacity: 0.6; cursor: default; }
-  .typing { font-style: italic; color: #70757a; }
+  .typing { font-style: italic; color: var(--typing); }
   .msg .time {
     display: block;
     font-size: 11px;
@@ -143,22 +178,35 @@
     opacity: 0.6;
     text-align: right;
   }
-  .msg.user .time { color: #e8f0fe; }
-  .msg.bot .time { color: #9aa0a6; }
+  .msg.user .time { color: var(--user-time); }
+  .msg.bot .time { color: var(--bot-time); }
   #banner {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    background: #1a1a1a;
-    color: #8ab4f8;
+    background: var(--banner-bg);
+    color: var(--accent-soft);
     font-size: 14px;
     font-weight: 500;
     text-align: center;
     padding: 10px 16px;
-    border-bottom: 1px solid #3c4043;
+    border-bottom: 1px solid var(--border-soft);
     z-index: 100;
     letter-spacing: 0.3px;
+  }
+  #themeToggle {
+    position: fixed;
+    top: 8px;
+    right: 12px;
+    z-index: 101;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--fg);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 13px;
+    cursor: pointer;
   }
 </style>
 </head>
@@ -174,6 +222,7 @@
 </div>
 
 <div id="banner">Murat Karakaya Akademi · Yapay Zeka ile Sohbet</div>
+<button id="themeToggle">☀️ Açık Tema</button>
 
 <div id="chat">
   <div class="topbar">
@@ -200,6 +249,23 @@
   const chatInput = document.getElementById("chatInput");
   const sendBtn = document.getElementById("sendBtn");
   const history = [];
+
+  const themeToggle = document.getElementById("themeToggle");
+  function applyTheme(theme) {
+    if (theme === "light") {
+      document.body.classList.add("light");
+      themeToggle.textContent = "🌙 Koyu Tema";
+    } else {
+      document.body.classList.remove("light");
+      themeToggle.textContent = "☀️ Açık Tema";
+    }
+  }
+  applyTheme(localStorage.getItem("theme") || "dark");
+  themeToggle.addEventListener("click", () => {
+    const next = document.body.classList.contains("light") ? "dark" : "light";
+    localStorage.setItem("theme", next);
+    applyTheme(next);
+  });
 
   function addMessage(role, text) {
     const div = document.createElement("div");
