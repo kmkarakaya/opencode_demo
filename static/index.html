@@ -135,6 +135,15 @@
   }
   #inputbar button:disabled { opacity: 0.6; cursor: default; }
   .typing { font-style: italic; color: #70757a; }
+  .msg .time {
+    display: block;
+    font-size: 11px;
+    margin-top: 6px;
+    opacity: 0.6;
+    text-align: right;
+  }
+  .msg.user .time { color: #e8f0fe; }
+  .msg.bot .time { color: #9aa0a6; }
 </style>
 </head>
 <body>
@@ -182,6 +191,10 @@
     } else {
       div.textContent = text;
     }
+    const time = document.createElement("span");
+    time.className = "time";
+    time.textContent = new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+    div.appendChild(time);
     messagesEl.appendChild(div);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
