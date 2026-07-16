@@ -208,9 +208,86 @@
     font-size: 13px;
     cursor: pointer;
   }
+  #sidebar {
+    position: fixed;
+    top: 42px;
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    background: var(--panel);
+    border-right: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    z-index: 90;
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+  }
+  #sidebar.open { transform: translateX(0); }
+  #sidebar .side-head {
+    padding: 12px;
+    display: flex;
+    gap: 8px;
+  }
+  #sidebar .new-chat {
+    flex: 1;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 20px;
+    padding: 8px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #sidebar .sessions {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #sidebar .session-item {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--panel-alt);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--fg);
+  }
+  #sidebar .session-item:hover { opacity: 0.85; }
+  #sidebar .session-item.active { outline: 2px solid var(--accent); }
+  #sidebar .session-item .st { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  #sidebar .session-item .del {
+    float: right;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  #menuBtn {
+    position: fixed;
+    top: 8px;
+    left: 12px;
+    z-index: 101;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--fg);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  body.sidebar-open #home, body.sidebar-open #chat { padding-left: 240px; }
 </style>
 </head>
 <body>
+
+<button id="menuBtn">☰ Sohbetler</button>
+
+<div id="sidebar">
+  <div class="side-head">
+    <button class="new-chat" id="newChatBtn">+ Yeni Sohbet</button>
+  </div>
+  <div class="sessions" id="sessionList"></div>
+</div>
 
 <div id="home">
   <div class="logo"><span>M</span><span>u</span><span>r</span><span>a</span><span>t</span> <span>K</span>arakaya Akademi</div>
@@ -248,7 +325,9 @@
   const homeInput = document.getElementById("homeInput");
   const chatInput = document.getElementById("chatInput");
   const sendBtn = document.getElementById("sendBtn");
-  const history = [];
+  const sessionListEl = document.getElementById("sessionList");
+  let history = [];
+  let currentSessionId = null;
 
   const themeToggle = document.getElementById("themeToggle");
   function applyTheme(theme) {
@@ -266,6 +345,83 @@
     localStorage.setItem("theme", next);
     applyTheme(next);
   });
+
+  const menuBtn = document.getElementById("menuBtn");
+  const sidebar = document.getElementById("sidebar");
+  menuBtn.addEventListener("click", () => {
+    sidebar.classList.toggle("open");
+    document.body.classList.toggle("sidebar-open");
+  });
+
+  function clearMessages() { messagesEl.innerHTML = ""; }
+
+  async function loadSessions() {
+    try {
+      const resp = await fetch("/api/sessions");
+      const sessions = await resp.json();
+      sessionListEl.innerHTML = "";
+      sessions.forEach((s) => {
+        const item = document.createElement("div");
+        item.className = "session-item" + (s.id === currentSessionId ? " active" : "");
+        item.innerHTML = `<span class="del" data-id="${s.id}">✕</span>${escapeHtml(s.title)}<div class="st">${new Date(s.updated_at).toLocaleString("tr-TR")}</div>`;
+        item.addEventListener("click", (e) => {
+          if (e.target.classList.contains("del")) return;
+          openSession(s.id);
+        });
+        item.querySelector(".del").addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteSession(s.id);
+        });
+        sessionListEl.appendChild(item);
+      });
+    } catch (e) { /* yoksay */ }
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  async function openSession(sid) {
+    currentSessionId = sid;
+    try {
+      const resp = await fetch("/api/sessions/" + sid);
+      const data = await resp.json();
+      history = data.messages;
+    } catch (e) {
+      history = [];
+    }
+    clearMessages();
+    history.forEach((m) => addMessage(m.role, m.content));
+    document.getElementById("home").style.display = "none";
+    document.getElementById("chat").style.display = "flex";
+    loadSessions();
+    chatInput.focus();
+  }
+
+  async function deleteSession(sid) {
+    await fetch("/api/sessions/" + sid, { method: "DELETE" });
+    if (currentSessionId === sid) { currentSessionId = null; history = []; clearMessages(); }
+    loadSessions();
+  }
+
+  async function newSession() {
+    const resp = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Yeni Sohbet" }),
+    });
+    const s = await resp.json();
+    currentSessionId = s.id;
+    history = [];
+    clearMessages();
+    document.getElementById("home").style.display = "none";
+    document.getElementById("chat").style.display = "flex";
+    loadSessions();
+    chatInput.focus();
+  }
+  document.getElementById("newChatBtn").addEventListener("click", newSession);
 
   function addMessage(role, text) {
     const div = document.createElement("div");
@@ -291,6 +447,7 @@
 
   async function send(text) {
     if (!text.trim()) return;
+    if (!currentSessionId) { await newSession(); }
     addMessage("user", text);
     history.push({ role: "user", content: text });
     chatInput.value = "";
@@ -306,7 +463,7 @@
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, model: document.getElementById("modelSelect").value }),
+        body: JSON.stringify({ messages: history, model: document.getElementById("modelSelect").value, session_id: currentSessionId }),
       });
       const data = await resp.json();
       messagesEl.removeChild(typing);
@@ -315,6 +472,7 @@
       } else {
         addMessage("bot", data.reply);
         history.push({ role: "assistant", content: data.reply });
+        loadSessions();
       }
     } catch (e) {
       messagesEl.removeChild(typing);
@@ -341,6 +499,8 @@
     document.getElementById("home").style.display = "flex";
     homeInput.focus();
   });
+
+  loadSessions();
 </script>
 </body>
 </html>
