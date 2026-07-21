@@ -16,7 +16,7 @@ Efor: Düşük / Orta / Yüksek
 - [ ] **UI-1** Hata balonlarına ayrı `.msg.error` stili; `catch` bloğunda `e.message` kullan. (Efor: Düşük)
 - [ ] **UI-2** Animasyonlu "yazıyor" göstergesi (üç nokta CSS animasyonu). (Efor: Düşük)
 - [ ] **UI-3** Mobil responsive tasarım (`@media (max-width:600px)`: logo küçült, balon %85, topbar dikey). (Efor: Düşük)
-- [ ] **UI-5** Mesaj zaman damgası (HH:MM) ekle. (Efor: Düşük)
+- [x] **UI-5** Mesaj zaman damgası (HH:MM) ekle. (Efor: Düşük)
 - [ ] **UI-6** "Sohbeti temizle" butonu (`history=[]`, mesajları sil). (Efor: Düşük)
 ### Security
 - [ ] **SEC-5** Hata mesajlarını genelleştir; iç detayı (upstream IP/port) yalnızca log'a yaz. (Efor: Düşük)

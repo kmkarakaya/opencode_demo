@@ -2,7 +2,8 @@
 
 Basit, tek sayfalık bir **web tabanlı sohbet botu**. FastAPI ile yazılmış bir sunucu,
 Google benzeri bir açılış ekranı sunar ve kullanıcı mesajlarını **OpenAI uyumlu bir LLM
-backend**'ine iletir. Sohbet geçmişi korunur ve bot yanıtları Markdown olarak render edilir.
+backend**'ine iletir. Sohbet geçmişi oturum (session) bazında sunucuda saklanır ve
+bot yanıtları Markdown olarak render edilir.
 
 > Örnek/demo proje ("opencode demo"). Arayüz ve dokümantasyon Türkçe'dir.
 
@@ -10,9 +11,14 @@ backend**'ine iletir. Sohbet geçmişi korunur ve bot yanıtları Markdown olara
 
 - Google tarzı açılış ekranı → sohbet ekranı geçişi
 - OpenAI uyumlu LLM'e proxy (`/v1/chat/completions`)
+- **Oturum bazlı sohbet geçmişi**: her sohbet bir session olarak sunucuda (bellekte) saklanır;
+  soldan açılan panelden geçmiş sohbetler listelenir, yeniden açılır veya silinir
 - Çok mesajlı sohbet bağlamı (conversation history) korunur
 - Arayüzden model seçimi (dropdown)
 - Bot yanıtları Markdown olarak gösterilir (kod blokları, tablolar vb.)
+- Her mesajda tarih + saat damgası (gün.ay.yıl SS:DD)
+- Açık/koyu tema seçeneği (sağ üstteki buton, tercih `localStorage`'da saklanır)
+- Üst banner ("Murat Karakaya Akademi · Yapay Zeka ile Sohbet")
 - Hata ve bağlantı kopması durumunda satır içi uyarı
 
 ## Teknoloji
@@ -41,9 +47,18 @@ opencode demo/
 ### `main.py`
 - `.env` yüklenir (`load_dotenv`).
 - Yapılandırma: `API_TOKEN`, `BASE_URL`, `MODEL`.
+- Session'lar bellekte tutulur (`SESSIONS: dict[str, dict]`) — sunucu yeniden başlatılınca
+  geçmiş sohbetler kaybolur (kalıcı depolama yok).
 - Rotalar:
   - `GET /` → `static/index.html` servis eder.
-  - `POST /api/chat` → `{ messages, model? }` alır, LLM'e iletir, `{ reply }` döner.
+  - `GET /api/sessions` → tüm session'ların özetini (`id, title, created_at, updated_at`)
+    en son güncellenen üstte olacak şekilde döner.
+  - `POST /api/sessions` → yeni bir session oluşturur (`{ title? }`).
+  - `GET /api/sessions/{sid}` → bir session'ın mesaj geçmişini döner.
+  - `DELETE /api/sessions/{sid}` → session'ı siler.
+  - `POST /api/chat` → `{ messages, model?, session_id? }` alır, LLM'e iletir, `{ reply }`
+    döner; `session_id` verilmişse konuşma o session'ın geçmişine yazılır ve session'ın
+    başlığı ilk mesajdan otomatik türetilir.
 - LLM çağrısı: `POST {BASE_URL}/chat/completions`, `Authorization: Bearer {API_TOKEN}`,
   `temperature: 0.7`, `stream: False`.
 - Hata kodları: boş mesaj → `400`, upstream hatası → `502`, beklenmeyen → `500`.
@@ -51,8 +66,12 @@ opencode demo/
 ### `static/index.html`
 - **Home:** Renkli "Murat Karakaya Akademi" logosu, yuvarlak arama kutusu, kredi satırı.
 - **Chat:** Üst bar (marka + model seçici + "Ana ekrana dön"), mesaj listesi, girdi çubuğu.
-- Akış: `history` dizisi tüm konuşmayı tutar; her gönderimde tüm geçmiş `/api/chat`'e
-  yollanır, yanıt `marked.parse()` ile Markdown olarak basılır.
+- **Sidebar (☰ Sohbetler):** "+ Yeni Sohbet" butonu ve `/api/sessions`'tan çekilen geçmiş
+  sohbet listesi; her öğe tıklanınca o session'ı açar, ✕ ile silinebilir.
+- **Tema butonu (☀️/🌙):** açık/koyu tema arasında geçiş yapar, tercihi `localStorage`'a yazar.
+- **Zaman damgası:** her mesajın altında gönderim tarihi ve saati gösterilir.
+- Akış: `history` dizisi aktif session'ın konuşmasını tutar; her gönderimde tüm geçmiş ve
+  `session_id` `/api/chat`'e yollanır, yanıt `marked.parse()` ile Markdown olarak basılır.
 
 ## Yapılandırma (`.env`)
 
@@ -88,11 +107,13 @@ uvicorn main:app --host 0.0.0.0 --port 2026
 ## Kullanım Akışı
 
 1. Kullanıcı Google tarzı açılış ekranında sorusunu yazar ve gönderir.
-2. Uygulama sohbet ekranına geçer ve ilk mesajı yollar.
-3. Her yeni mesaj geçmişe eklenir; tüm geçmiş `/api/chat`'e gönderilir.
-4. Sunucu LLM'den (`/v1/chat/completions`) yanıtı alır ve döndürür.
-5. Arayüz yanıtı Markdown olarak sohbet balonunda gösterir; bağlam korunur.
-6. Kullanıcı modeli dropdown'dan değiştirebilir veya "Ana ekrana dön" ile çıkabilir.
+2. Uygulama arka planda bir session oluşturur (`POST /api/sessions`) ve sohbet ekranına geçer.
+3. Her yeni mesaj geçmişe eklenir; tüm geçmiş ve `session_id`, `/api/chat`'e gönderilir.
+4. Sunucu LLM'den (`/v1/chat/completions`) yanıtı alır, ilgili session'a kaydeder ve döndürür.
+5. Arayüz yanıtı Markdown olarak, tarih/saat damgasıyla sohbet balonunda gösterir; bağlam korunur.
+6. Kullanıcı ☰ panelinden geçmiş sohbetlere dönebilir, yeni sohbet başlatabilir veya bir
+   sohbeti silebilir; sağ üstten açık/koyu temayı değiştirebilir; modeli dropdown'dan
+   değiştirebilir veya "Ana ekrana dön" ile çıkabilir.
 
 ## Testler
 
